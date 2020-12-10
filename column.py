@@ -57,7 +57,7 @@ class VarChar(Col):
         self.size = size 
         super().__init__(VarChar.col_type, default_value, nullable, primary_key)
 
-    def getSize(self):
+    def get_size(self):
         return self.size
 
     def get_col_type(self):

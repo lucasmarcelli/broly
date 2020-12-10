@@ -49,13 +49,7 @@ class Model:
         table = Table(self.get_table_name())
         q = Query.into(table)
         q = self.__build_insert_query(q)
-        return client.execute_statement(
-            continueAfterTimeout=True,
-            database=self.database,
-            resourceArn=self.resource_arn,
-            secretArn=self.secret_arn,
-            sql=q.get_sql()
-        )
+        return self.__execute(q.get_sql())
 
     def save(self, where=None):
         if where is None:
@@ -65,13 +59,7 @@ class Model:
         q = Query.update(table)
         q = self.__build_update_query(q)
         q = self.__build_where_clause(q, where, self.instance_cols[where].get_value())
-        return client.execute_statement(
-            continueAfterTimeout=True,
-            database=self.database,
-            resourceArn=self.resource_arn,
-            secretArn=self.secret_arn,
-            sql=q.get_sql()
-        )
+        return self.__execute(q.get_sql())
 
     def as_json(self):
        return json.dumps(self.__dict__())
@@ -89,15 +77,7 @@ class Model:
         q = self.__build_get_query(q)
         q = self.__build_where_clause(q, 'id', id)
 
-        # TODO: Parse the weird way the data API responds into 
-        # an instance
-        return client.execute_statement(
-            continueAfterTimeout=True,
-            database=self.database,
-            resourceArn=self.resource_arn,
-            secretArn=self.secret_arn,
-            sql=q.get_sql()
-        )
+        return self.__execute(q.get_sql())
 
     def __build_get_query(self, q):
         cols = tuple(self.get_columns())
@@ -144,4 +124,13 @@ class Model:
 
     def __filter_columns(self):
         return [key for key in dir(self) if key[0] != "_" and isinstance(getattr(self, key), Col)]
+    
+    def __execute(self, sql):
+        return client.execute_statement(
+            continueAfterTimeout=True,
+            database=self.database,
+            resourceArn=self.resource_arn,
+            secretArn=self.secret_arn,
+            sql=sql
+        )
 
