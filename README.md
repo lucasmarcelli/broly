@@ -2,7 +2,7 @@
 
 Small module for managing models with the AWS rds data-api from lambda. Should be set into a lambda layer.
 
-Uses [pypika](https://github.com/kayak/pypika) to generate MySQL and `boto3('rds-client')`
+Uses [pypika](https://github.com/kayak/pypika) to generate MySQL and boto3's rds-data client.
 
 
 MVP Features:
@@ -11,12 +11,14 @@ MVP Features:
 - [x] Model manipulation
 - [x] Insert
 - [x] Update
-- [ ] Autoincrement option
-- [ ] Read by id and parse response
+- [x] Autoincrement option
+- [x] Read by column and parse response
 - [ ] Main MySQL column classes
 - [ ] Table creation
+- [ ] Bulk get
 - [ ] Tests
-
+- [ ] Joins
+- [ ] Basic error response handling
 
 ## Usage
 ```python

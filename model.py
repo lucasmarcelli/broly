@@ -4,9 +4,9 @@ from copy import deepcopy
 from column import Col
 from pypika import MySQLQuery as Query, Table
 
-class Model:
+client = boto3.client('rds-data', region_name='us-east-1')
 
-    client = boto3('rds-client')
+class Model:
 
     def __init__(self, *args, **kwargs):
         self.database = self.__get_database_name()
@@ -51,13 +51,15 @@ class Model:
         q = self.__build_insert_query(q)
         return self.__execute(q.get_sql())
 
-    def save(self, where=None):
+    def save(self, where=None, fields=None):
         if where is None:
             where = self.primary_key
+        if fields is None:
+            fields = self.get_columns()
         self.__validate_columns()
         table = Table(self.get_table_name())
         q = Query.update(table)
-        q = self.__build_update_query(q)
+        q = self.__build_update_query(q, fields)
         q = self.__build_where_clause(q, where, self.instance_cols[where].get_value())
         return self.__execute(q.get_sql())
 
@@ -65,22 +67,37 @@ class Model:
        return json.dumps(self.__dict__())
 
     def set_value(self, col, val):
-        self[col].set_value(val)
+        self.instance_cols[col].set_value(val)
 
-    def get_by_id(self, id=None):
-        if id is None:
-            id = self.instance_cols['id'].get_value()
-        if id is None:
-            raise Exception("You need to pass an id or have one in the object")
+    def get_by_pk(self, val=None, fields=None):
+        if val is None:
+            val = self.instance_cols[self.primary_key].get_value()
+        if val is None:
+            raise Exception("You need to pass a value or have one in the primary key")
+        return self.get_by_column(col=self.primary_key, val=val, fields=fields)
+
+    def get_by_column(self, col=None, val=None, fields=None):
+        if fields is None:
+            fields = self.get_columns()
         table = Table(self.get_table_name())
         q = Query.from_(table)
-        q = self.__build_get_query(q)
-        q = self.__build_where_clause(q, 'id', id)
+        q = self.__build_get_query(q, fields)
+        q = self.__build_where_clause(q, col, val)
+        response = self.__execute(q.get_sql())
+        records = self.__parse_record(json.dumps(records)['records'][0], fields)
+        return self.parse_record(record=record, fields=fields)
 
-        return self.__execute(q.get_sql())
+    # Always return a new instance to avoid errors
+    def parse_record(self, record=None, fields=None):
+        m = self.__class__()
+        for i in range(0, len(record)):
+            col = fields[i]
+            val = record[i][self.instance_cols[col].get_aws_value_type()]
+            m.set_value(col, val)
+        return m
 
-    def __build_get_query(self, q):
-        cols = tuple(self.get_columns())
+    def __build_get_query(self, q, fields):
+        cols = tuple(fields)
         return q.select(cols)
 
     def __validate_columns(self):
@@ -92,8 +109,8 @@ class Model:
         vals = tuple(self.get_values())
         return q.columns(cols).insert(vals)
     
-    def __build_update_query(self, q):
-        for col in self.get_columns():
+    def __build_update_query(self, q, fields):
+        for col in fields:
             if col != self.primary_key:
                 q = q.set(table[col],self.instance_cols[col].get_value())
         return q
@@ -133,4 +150,5 @@ class Model:
             secretArn=self.secret_arn,
             sql=sql
         )
-
+        
+        

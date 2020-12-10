@@ -40,6 +40,9 @@ class IntColumn(Col):
     def __init__(self, default_value=None, nullable=True, primary_key=False, auto_increment=False):
         self.auto_increment = auto_increment
         super().__init__(IntColumn.col_type, default_value, nullable, primary_key)
+    
+    def get_aws_value_type(self):
+        return "longValue"
 
 
 class SmallInt(Col):
@@ -47,6 +50,9 @@ class SmallInt(Col):
 
     def __init__(self, default_value=None, nullable=True, primary_key=False):
         super().__init__(SmallInt.col_type, default_value, nullable, primary_key)
+    
+    def get_aws_value_type(self):
+        return "longValue"
 
 
 class VarChar(Col):
@@ -62,3 +68,6 @@ class VarChar(Col):
 
     def get_col_type(self):
         return "VARCHAR("+str(self.size)+")"
+
+    def get_aws_value_type(self):
+        return "stringValue"
