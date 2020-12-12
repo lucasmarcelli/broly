@@ -28,10 +28,11 @@ class Col:
         if self.get_value() is None and not self.is_nullable() and self.get_default_value() is None:
             raise Exception("Can't set non nullable value to none for " + str(key))
     
+    def get_def_statement(self, name):
+        raise Exception("you must define this on the subclass")
+
     def __repr__(self):
         return str(self.value)
-
-
 
 class IntColumn(Col):
 
@@ -44,15 +45,31 @@ class IntColumn(Col):
     def get_aws_value_type(self):
         return "longValue"
 
+    def get_def_statement(self, name):
+        ai = 'AUTO_INCREMENT' if self.auto_increment else ''
+        pk = 'PRIMARY KEY' if self.is_primary_key() else ''
+        nn = 'NOT NULL' if not self.is_nullable() else ''
+        d = '' if self.default_value is None else f'DEFAULT {self.get_default_value()}'
+        return f'{name} {IntColumn.col_type} {nn} {ai} {pk} {d}'
+
+    
 
 class SmallInt(Col):
     col_type = "SMALLINT"
 
-    def __init__(self, default_value=None, nullable=True, primary_key=False):
+    def __init__(self, default_value=None, nullable=True, primary_key=False, auto_increment=False):
+        self.auto_increment = auto_increment
         super().__init__(SmallInt.col_type, default_value, nullable, primary_key)
     
     def get_aws_value_type(self):
         return "longValue"
+    
+    def get_def_statement(self, name):
+        ai = 'AUTO_INCREMENT' if self.auto_increment else ''
+        pk = 'PRIMARY KEY' if self.is_primary_key() else ''
+        nn = 'NOT NULL' if not self.is_nullable() else ''
+        d = '' if self.default_value is None else f'DEFAULT {self.get_default_value()}'
+        return f'{name} {SmallInt.col_type} {nn} {ai} {pk} {d}'
 
 
 class VarChar(Col):
@@ -71,3 +88,10 @@ class VarChar(Col):
 
     def get_aws_value_type(self):
         return "stringValue"
+    
+    def get_def_statement(self, name):
+        pk = 'PRIMARY KEY' if self.is_primary_key() else ''
+        nn = 'NOT NULL' if not self.is_nullable() else ''
+        d = '' if self.default_value is None else f'DEFAULT {self.get_default_value()}'
+        col = f'{VarChar.col_type}({self.get_size()})'
+        return f'{name} {col} {nn} {pk} {d}'

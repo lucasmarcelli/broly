@@ -44,13 +44,25 @@ class Model:
     def get_table_name(self):
         return self.table_name
 
+    def create_table(self):
+        # Pypika's create table doesn't create valid MySQL for some reason so I'm doing a custom one
+        column_defs = []
+        for col in self.get_columns():
+            column_defs.append(f'{self.instance_cols[col].get_def_statement(col)}')
+        sql =  f"CREATE TABLE IF NOT EXISTS {self.get_table_name()} ({', '.join(column_defs)});"
+        return self.__execute(sql)
+
     def create(self):
         self.__validate_columns()
         table = Table(self.get_table_name())
         q = Query.into(table)
         q = self.__build_insert_query(q)
-        return self.__execute(q.get_sql())
-
+        response = json.dumps(self.__execute(q.get_sql()))
+        # I'm not sure what happens if there's more than one generated field here, but that seems like a bridge to cross when I come to it.
+        key = self.instance_cols[self.primary_key].get_aws_value_type()
+        pk = response['generatedFields'][0][key]
+        return self.get_by_pk(pk)
+    
     def save(self, where=None, fields=None):
         if where is None:
             where = self.primary_key
@@ -60,8 +72,9 @@ class Model:
         table = Table(self.get_table_name())
         q = Query.update(table)
         q = self.__build_update_query(q, fields)
-        q = self.__build_where_clause(q, where, self.instance_cols[where].get_value())
-        return self.__execute(q.get_sql())
+        q = self.__build_in_where_clause(q, where, [self.instance_cols[where].get_value()])
+        response = self.__execute(q.get_sql())
+        return self.get_by_pk()
 
     def as_json(self):
        return json.dumps(self.__dict__())
@@ -69,32 +82,51 @@ class Model:
     def set_value(self, col, val):
         self.instance_cols[col].set_value(val)
 
-    def get_by_pk(self, val=None, fields=None):
-        if val is None:
-            val = self.instance_cols[self.primary_key].get_value()
-        if val is None:
-            raise Exception("You need to pass a value or have one in the primary key")
-        return self.get_by_column(col=self.primary_key, val=val, fields=fields)
-
-    def get_by_column(self, col=None, val=None, fields=None):
+    def get_by_pk(self, pks=None, fields=None):
+        if pks is None:
+            pks = self.instance_cols[self.primary_key].get_value()
+        if pks is None:
+            raise Exception("You need to pass value(s) or have one in the primary key of this object")
+        return self.get_by_column(col=self.primary_key, vals=pks, fields=fields)
+        
+    def get_by_column(self, col=None, vals=None, fields=None):
         if fields is None:
             fields = self.get_columns()
         table = Table(self.get_table_name())
         q = Query.from_(table)
         q = self.__build_get_query(q, fields)
-        q = self.__build_where_clause(q, col, val)
-        response = self.__execute(q.get_sql())
-        records = self.__parse_record(json.dumps(records)['records'][0], fields)
-        return self.parse_record(record=record, fields=fields)
+        q = self.__build_in_where_clause(q, col, vals)
+        response = json.dumps(self.__execute(q.get_sql()))
+        records = self.__parse_records(response['records'], fields)
+        return records
 
+    def get_by_pypika_query(self, q):
+        response = json.dumps(self.__execute(q.get_sql()), with_meta=True)
+        column_names = self.__parse_metadata(response['columnMetadata'])
+        records = self.__parse_records(response['records'], column_names)
+        return records
+
+    def __parse_records(self, records=None, fields=None):
+        parsed = []
+        for record in records:
+            parsed.append(self.__parse_record(record), fields)
+        return parsed
+        
     # Always return a new instance to avoid errors
-    def parse_record(self, record=None, fields=None):
+    def __parse_record(self, record=None, fields=None):
         m = self.__class__()
         for i in range(0, len(record)):
             col = fields[i]
             val = record[i][self.instance_cols[col].get_aws_value_type()]
             m.set_value(col, val)
         return m
+    
+    def __parse_metadata(self, metadata):
+        column_names = []
+        for meta in metadata:
+            if self.instance_cols[meta['name']] is not None:
+                column_names.append(meta['name'])
+        return column_names
 
     def __build_get_query(self, q, fields):
         cols = tuple(fields)
@@ -110,14 +142,16 @@ class Model:
         return q.columns(cols).insert(vals)
     
     def __build_update_query(self, q, fields):
+        table = Table(self.get_table_name())
         for col in fields:
             if col != self.primary_key:
                 q = q.set(table[col],self.instance_cols[col].get_value())
         return q
 
-    def __build_where_clause(self, q, col, val):
+    def __build_in_where_clause(self, q, col, vals):
         table = Table(self.get_table_name())
-        return q.where(table[col]==val)
+        vals = tuple(vals)
+        return q.where(table[col].isin(vals))
     
     def __get_table_name(self):
         if('table_name' not in dir(self)):
@@ -142,12 +176,13 @@ class Model:
     def __filter_columns(self):
         return [key for key in dir(self) if key[0] != "_" and isinstance(getattr(self, key), Col)]
     
-    def __execute(self, sql):
+    def __execute(self, sql, with_meta=False):
         return client.execute_statement(
             continueAfterTimeout=True,
             database=self.database,
             resourceArn=self.resource_arn,
             secretArn=self.secret_arn,
+            includeResultMetadata=with_meta,
             sql=sql
         )
         

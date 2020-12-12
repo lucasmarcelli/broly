@@ -13,12 +13,13 @@ MVP Features:
 - [x] Update
 - [x] Autoincrement option
 - [x] Read by column and parse response
+- [x] Table creation
+- [x] Bulk get
+- [x] Take pypika get queries to execute directly 
 - [ ] Main MySQL column classes
-- [ ] Table creation
-- [ ] Bulk get
 - [ ] Tests
-- [ ] Joins
 - [ ] Basic error response handling
+    - [ ] Wait for serverless wakeup, boto3 doesn't retry automatically if db is 'asleep'
 
 ## Usage
 ```python
@@ -39,4 +40,5 @@ class Example(Model):
 e = Example(name="name")
 e.set_value('description', 'desc')
 print(e)
-e.save()
+e = e.save()
+print(e)
