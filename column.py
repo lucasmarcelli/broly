@@ -29,10 +29,24 @@ class Col:
             raise Exception("Can't set non nullable value to none for " + str(key))
     
     def get_def_statement(self, name):
-        raise Exception("you must define this on the subclass")
+        val = f'{self.__get_initial_def(name)}'.strip()
+        val = f'{val} {self.get_extras_for_def()}'.strip()
+        return f'{val} {self.__get_pk_and_default_def()}'.strip()
+
+    def get_extras_for_def(self):
+        return ''
 
     def __repr__(self):
         return str(self.value)
+
+    def __get_initial_def(self, name):
+        return f'{name} {self.get_col_type()} {"NOT NULL" if self.is_nullable() else ""}'.strip()
+
+    def __get_pk_and_default_def(self):
+        pk = 'PRIMARY KEY' if self.is_primary_key() else ''
+        d = '' if self.default_value is None else f'DEFAULT {self.get_default_value()}'
+        return  f'{pk} {d}'.strip()
+
 
 class IntColumn(Col):
 
@@ -45,14 +59,9 @@ class IntColumn(Col):
     def get_aws_value_type(self):
         return "longValue"
 
-    def get_def_statement(self, name):
+    def get_extras_for_def(self):
         ai = 'AUTO_INCREMENT' if self.auto_increment else ''
-        pk = 'PRIMARY KEY' if self.is_primary_key() else ''
-        nn = 'NOT NULL' if not self.is_nullable() else ''
-        d = '' if self.default_value is None else f'DEFAULT {self.get_default_value()}'
-        return f'{name} {IntColumn.col_type} {nn} {ai} {pk} {d}'
-
-    
+        return f'{ai}'.strip()
 
 class SmallInt(Col):
     col_type = "SMALLINT"
@@ -64,12 +73,9 @@ class SmallInt(Col):
     def get_aws_value_type(self):
         return "longValue"
     
-    def get_def_statement(self, name):
+    def get_extras_for_def(self):
         ai = 'AUTO_INCREMENT' if self.auto_increment else ''
-        pk = 'PRIMARY KEY' if self.is_primary_key() else ''
-        nn = 'NOT NULL' if not self.is_nullable() else ''
-        d = '' if self.default_value is None else f'DEFAULT {self.get_default_value()}'
-        return f'{name} {SmallInt.col_type} {nn} {ai} {pk} {d}'
+        return f'{ai}'.strip()
 
 
 class VarChar(Col):
@@ -88,10 +94,3 @@ class VarChar(Col):
 
     def get_aws_value_type(self):
         return "stringValue"
-    
-    def get_def_statement(self, name):
-        pk = 'PRIMARY KEY' if self.is_primary_key() else ''
-        nn = 'NOT NULL' if not self.is_nullable() else ''
-        d = '' if self.default_value is None else f'DEFAULT {self.get_default_value()}'
-        col = f'{VarChar.col_type}({self.get_size()})'
-        return f'{name} {col} {nn} {pk} {d}'

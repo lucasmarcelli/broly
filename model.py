@@ -50,7 +50,8 @@ class Model:
         for col in self.get_columns():
             column_defs.append(f'{self.instance_cols[col].get_def_statement(col)}')
         sql =  f"CREATE TABLE IF NOT EXISTS {self.get_table_name()} ({', '.join(column_defs)});"
-        return self.__execute(sql)
+        print(sql)
+        # return self.__execute(sql)
 
     def create(self):
         self.__validate_columns()
