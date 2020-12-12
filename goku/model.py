@@ -1,7 +1,7 @@
 import json
 import boto3
+from goku.column import Col
 from copy import deepcopy
-from column import Col
 from pypika import MySQLQuery as Query, Table
 
 client = boto3.client('rds-data', region_name='us-east-1')

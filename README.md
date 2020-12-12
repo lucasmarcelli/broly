@@ -21,6 +21,16 @@ MVP Features:
 - [ ] Basic error response handling
     - [ ] Wait for serverless wakeup, boto3 doesn't retry automatically if db is 'asleep'
 
+
+## To add to lambda layer
+```bash
+mkdir python
+pip3 install aws-goku --target python/
+zip -r python layer
+```
+
+Then just upload it to your lambda's layer.
+
 ## Usage
 ```python
 from model import Model
@@ -42,3 +52,4 @@ e.set_value('description', 'desc')
 print(e)
 e = e.save()
 print(e)
+```
