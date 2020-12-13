@@ -139,7 +139,7 @@ class VarChar(Col):
 
 class DateTime(Col):
 
-    col_type = 'DATETIME'
+    col_type = 'DATETIME(6)'
 
     def __init__(self, default_value=None, nullable=True, primary_key=False, unique=None, on_update=None):
         super().__init__(col_type=DateTime.col_type, default_value=default_value, nullable=nullable, primary_key=primary_key, unique=unique, on_update=on_update)
@@ -152,7 +152,7 @@ class DateTime(Col):
         return 'stringValue'
     
     def set_value(self, val):
-        if val is None or val == 'CURRENT_TIMESTAMP':
+        if val is None or 'CURRENT_TIMESTAMP' in val:
             super().set_value(None)
         else:
             super().set_value(datetime.strptime(val, "%Y-%m-%d %H:%M:%S.%f"))

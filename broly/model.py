@@ -9,8 +9,8 @@ client = boto3.client('rds-data', region_name='us-east-1')
 
 class Model:
 
-    created_at = DateTime(default_value='CURRENT_TIMESTAMP')
-    updated_at = DateTime(default_value='CURRENT_TIMESTAMP', on_update='CURRENT_TIMESTAMP')
+    created_at = DateTime(default_value='CURRENT_TIMESTAMP(6)')
+    updated_at = DateTime(default_value='CURRENT_TIMESTAMP(6)', on_update='CURRENT_TIMESTAMP(6)')
 
     def __init__(self, *args, **kwargs):
         self.database = self.__get_database_name()
@@ -224,7 +224,6 @@ class Model:
 
                 # Aurora serverless is waking up
                 if error_code == 'BadRequestException' and 'Communications link failure' in error_msg:
-                    logger.info('Sleeping ' + str(delay) + ' secs, waiting RDS connection')
                     time.sleep(delay)
                 else:
                     raise ce
