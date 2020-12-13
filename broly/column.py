@@ -20,7 +20,7 @@ class Col:
         return self.nullable
 
     def is_unique(self):
-        return self.is_unique
+        return self.unique
     
     def is_primary_key(self):
         return self.primary_key
@@ -47,7 +47,7 @@ class Col:
         return str(self.value)
 
     def __get_initial_def(self, name):
-        val = f'{name} {self.get_col_type()} {"NOT NULL" if self.is_nullable() else ""}'.strip()
+        val = f'{name} {self.get_col_type()} {"" if self.is_nullable() else "NOT NULL"}'.strip()
         d = '' if self.default_value is None else f'DEFAULT {self.get_default_value()}'
         return f'{val} {d}'.strip()
 
@@ -62,7 +62,7 @@ class NumericColumnType(Col):
     def __init__(self, col_type=None, auto_increment=False, default_value=None, nullable=True, primary_key=False, unique=None, unsigned=False, on_update=None):
         self.auto_increment = auto_increment
         self.unsigned = unsigned
-        super().__init__(col_type, default_value, nullable, primary_key, unique=unique, on_update=on_update)
+        super().__init__(col_type=col_type, default_value=default_value, nullable=nullable, primary_key=primary_key, unique=unique, on_update=on_update)
     
     def get_extras_for_def(self):
         ai = 'AUTO_INCREMENT' if self.auto_increment else ''
@@ -89,7 +89,7 @@ class IntColumn(NumericColumnType):
     col_type = 'INT'
     
     def __init__(self, default_value=None, nullable=True, primary_key=False, auto_increment=False, unique=None, on_update=None):
-        super().__init__(IntColumn.col_type, auto_increment, default_value, nullable, primary_key, unique=unique, on_update=on_update)
+        super().__init__(col_type=IntColumn.col_type, auto_increment=auto_increment, default_value=default_value, nullable=nullable, primary_key=primary_key, unique=unique, on_update=on_update)
     
     def get_aws_value_type(self):
         return 'longValue'
@@ -99,7 +99,7 @@ class SmallInt(NumericColumnType):
     col_type = 'SMALLINT'
 
     def __init__(self, default_value=None, nullable=True, primary_key=False, auto_increment=False, unique=None, on_update=None):
-        super().__init__(SmallInt.col_type, auto_increment, default_value, nullable, primary_key, unique=unique, on_update=on_update)
+        super().__init__(col_type=SmallInt.col_type, auto_increment=auto_increment, default_value=default_value, nullable=nullable, primary_key=primary_key, unique=unique, on_update=on_update)
     
     def get_aws_value_type(self):
         return 'longValue'
@@ -109,7 +109,7 @@ class Bool(Col):
     col_type = 'BOOLEAN'
 
     def __init__(self, default_value=None, nullable=True, on_update=None):
-        super().__init__(Bool.col_type, default_value=default_value, nullable=nullable, on_update=on_update)
+        super().__init__(col_type=Bool.col_type, default_value=default_value, nullable=nullable, on_update=on_update)
 
     def get_aws_value_type(self):
         return 'booleanValue'
@@ -126,7 +126,7 @@ class VarChar(Col):
 
     def __init__(self, size=100, default_value=None, nullable=True, primary_key=False, unique=None, on_update=None):
         self.size = size 
-        super().__init__(VarChar.col_type, default_value, nullable, primary_key, unique=unique, on_update=on_update)
+        super().__init__(col_type=VarChar.col_type, default_value=default_value, nullable=nullable, primary_key=primary_key, unique=unique, on_update=on_update)
 
     def get_size(self):
         return self.size
@@ -142,7 +142,7 @@ class DateTime(Col):
     col_type = 'DATETIME'
 
     def __init__(self, default_value=None, nullable=True, primary_key=False, unique=None, on_update=None):
-        super().__init__(VarChar.col_type, default_value, nullable, primary_key, unique=unique, on_update=on_update)
+        super().__init__(col_type=DateTime.col_type, default_value=default_value, nullable=nullable, primary_key=primary_key, unique=unique, on_update=on_update)
     
     # Always just get the max precision
     def get_col_type(self):
