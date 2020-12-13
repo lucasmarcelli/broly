@@ -1,6 +1,6 @@
 import json
 import boto3
-from goku.column import Col, DateTime
+from broly.column import Col, DateTime
 from copy import deepcopy
 from pypika import MySQLQuery as Query, Table
 

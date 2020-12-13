@@ -1,4 +1,4 @@
-from goku.column import (
+from broly.column import (
     Col,
     VarChar,
     IntColumn,
@@ -7,4 +7,4 @@ from goku.column import (
     DateTime,
     Decimal
 )
-from goku.model import Model
+from broly.model import Model

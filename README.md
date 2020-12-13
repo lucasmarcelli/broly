@@ -1,4 +1,4 @@
-# Goku
+# Broly
 
 Small module for managing models with the AWS rds data-api from lambda. Should be set into a lambda layer.
 
@@ -26,7 +26,7 @@ MVP Features:
 ## To add to lambda layer
 ```bash
 mkdir python
-pip3 install aws-goku --target python/
+pip3 install broly --target python/
 zip -r python layer
 ```
 
@@ -34,8 +34,8 @@ Then just upload it to your lambda's layer.
 
 ## Usage
 ```python
-from goku.model import Model
-from goku.column import IntColumn, VarChar
+from broly.model import Model
+from broly.column import IntColumn, VarChar
 
 class Example(Model):
 
