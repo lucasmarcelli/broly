@@ -16,7 +16,7 @@ MVP Features:
 - [x] Table creation
 - [x] Bulk get
 - [x] Take pypika get queries to execute directly 
-- [ ] Main MySQL column classes
+- [x] Main MySQL column classes
 - [ ] Basic error response handling
     - [ ] Wait for serverless wakeup, boto3 doesn't retry automatically if db is 'asleep'
 - [ ] Tests

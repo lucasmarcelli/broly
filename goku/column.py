@@ -1,11 +1,12 @@
 class Col:
-    def __init__(self, col_type, default_value=None, nullable=False, primary_key=False, unique=None):
+    def __init__(self, col_type, default_value=None, nullable=False, primary_key=False, unique=None, on_update=None):
         self.col_type = col_type
         self.default_value = default_value
-        self.nullable = nullable
+        self.nullable = False if primary_key else nullable
         self.primary_key = primary_key
         self.value = default_value
         self.unique = unique if unique is not None else self.primary_key
+        self.on_update = on_update
 
     def get_col_type(self):
         return self.col_type
@@ -30,7 +31,7 @@ class Col:
 
     def validate(self, key):
         if self.get_value() is None and not self.is_nullable() and self.get_default_value() is None:
-            raise Exception("Can't set non nullable value to none for " + str(key))
+            raise Exception(f'Can\'t set non nullable value to none for {str(key)}')
     
     def get_def_statement(self, name):
         val = f'{self.__get_initial_def(name)}'.strip()
@@ -44,72 +45,103 @@ class Col:
         return str(self.value)
 
     def __get_initial_def(self, name):
-        val = f'{name} {self.get_col_type()} {"NOT NULL" if self.is_nullable() else ""}'.strip()
+        val = f'{name} {self.get_col_type()} {'NOT NULL' if self.is_nullable() else ''}'.strip()
         d = '' if self.default_value is None else f'DEFAULT {self.get_default_value()}'
         return f'{val} {d}'.strip()
 
     def __get_contraints(self):
         pk = 'PRIMARY KEY' if self.is_primary_key() else ''
         unique = 'UNIQUE' if self.is_unique() else ''
-        return  f'{pk} {unique}'.strip()
+        on_update = f'ON UPDATE {self.on_update}' if self.on_update is not None else ''
+        val = f'{pk} {unique}'.strip()
+        return f'{val} {on_update}'.strip()
 
-
-class IntColumn(Col):
-
-    col_type = "INT"
-    
-    def __init__(self, default_value=None, nullable=True, primary_key=False, auto_increment=False, unique=None):
+class NumericColumnType(Col):
+    def __init__(self, col_type=None, auto_increment=False, default_value=None, nullable=True, primary_key=False, unique=None, unsigned=False, on_update=None):
         self.auto_increment = auto_increment
-        super().__init__(IntColumn.col_type, default_value, nullable, primary_key, unique=unique)
-    
-    def get_aws_value_type(self):
-        return "longValue"
-
-    def get_extras_for_def(self):
-        ai = 'AUTO_INCREMENT' if self.auto_increment else ''
-        return f'{ai}'.strip()
-
-class SmallInt(Col):
-    col_type = "SMALLINT"
-
-    def __init__(self, default_value=None, nullable=True, primary_key=False, auto_increment=False, unique=None):
-        self.auto_increment = auto_increment
-        super().__init__(SmallInt.col_type, default_value, nullable, primary_key, unique=unique)
-    
-    def get_aws_value_type(self):
-        return "longValue"
+        self.unsigned = unsigned
+        super().__init__(col_type, default_value, nullable, primary_key, unique=unique, on_update=on_update)
     
     def get_extras_for_def(self):
         ai = 'AUTO_INCREMENT' if self.auto_increment else ''
-        return f'{ai}'.strip()
+        unsigned = 'UNSIGNED' if self.unsigned else ''
+        return f'{ai} {unsigned}'.strip()
 
+class Decimal(NumericColumnType):
+
+    col_type = 'DECIMAL'
+
+    def __init__(self, precision=10, digits=0, default_value=None, nullable=True, primary_key=False, unique=None, on_update=None):
+        self.precision = precision
+        self.digits = digits
+        super().__init__(col_type=Decimal.col_type, nullable=nullable, primary_key=primary_key, unique=unique, default_value=default_value, on_update=on_update)
+    
+    def get_aws_value_type(self):
+        return 'doubleValue'
+
+    def get_col_type(self):
+        return f'DECIMAL({self.precision},{self.digits})'.strip()
+
+class IntColumn(NumericColumnType):
+
+    col_type = 'INT'
+    
+    def __init__(self, default_value=None, nullable=True, primary_key=False, auto_increment=False, unique=None, on_update=None):
+        super().__init__(IntColumn.col_type, auto_increment, default_value, nullable, primary_key, unique=unique, on_update=on_update)
+    
+    def get_aws_value_type(self):
+        return 'longValue'
+
+
+class SmallInt(NumericColumnType):
+    col_type = 'SMALLINT'
+
+    def __init__(self, default_value=None, nullable=True, primary_key=False, auto_increment=False, unique=None, on_update=None):
+        super().__init__(SmallInt.col_type, auto_increment, default_value, nullable, primary_key, unique=unique, on_update=on_update)
+    
+    def get_aws_value_type(self):
+        return 'longValue'
 
 class Bool(Col):
 
-    col_type = "BOOLEAN"
+    col_type = 'BOOLEAN'
 
-    def __init__(self, default_value=None, nullable=True):
-        super().__init__(Bool.col_type, default_value=default_value, nullable=nullable)
+    def __init__(self, default_value=None, nullable=True, on_update=None):
+        super().__init__(Bool.col_type, default_value=default_value, nullable=nullable, on_update=on_update)
 
     def get_aws_value_type(self):
-        return "booleanValue"
+        return 'booleanValue'
 
     def set_value(self, val):
         super().set_value(bool(val))
 
 class VarChar(Col):
 
-    col_type = "VARCHAR"
+    col_type = 'VARCHAR'
 
-    def __init__(self, size=100, default_value=None, nullable=True, primary_key=False, unique=None):
+    def __init__(self, size=100, default_value=None, nullable=True, primary_key=False, unique=None, on_update=None):
         self.size = size 
-        super().__init__(VarChar.col_type, default_value, nullable, primary_key, unique=unique)
+        super().__init__(VarChar.col_type, default_value, nullable, primary_key, unique=unique, on_update=on_update)
 
     def get_size(self):
         return self.size
 
     def get_col_type(self):
-        return "VARCHAR("+str(self.size)+")"
+        return f'VARCHAR({str(self.size)})'
 
     def get_aws_value_type(self):
-        return "stringValue"
+        return 'stringValue'
+
+class DateTime(Col):
+
+    col_type = 'DATETIME'
+
+        def __init__(self, default_value=None, nullable=True, primary_key=False, unique=None, on_update=None):
+            super().__init__(VarChar.col_type, default_value, nullable, primary_key, unique=unique, on_update=on_update)
+        
+        # Always just get the max precision
+        def get_col_type(self):
+            return f'DATETIME(6)'
+
+        def get_aws_value_type(self):
+            return 'stringValue'

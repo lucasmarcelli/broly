@@ -1,12 +1,15 @@
 import json
 import boto3
-from goku.column import Col
+from goku.column import Col, DateTime
 from copy import deepcopy
 from pypika import MySQLQuery as Query, Table
 
 client = boto3.client('rds-data', region_name='us-east-1')
 
 class Model:
+
+    created_at = DateTime(default_value='CURRENT_TIMESTAMP')
+    updated_at = DateTime(default_value='CURRENT_TIMESTAMP', on_update='CURRENT_TIMESTAMP')
 
     def __init__(self, *args, **kwargs):
         self.database = self.__get_database_name()
@@ -49,7 +52,7 @@ class Model:
         column_defs = []
         for col in self.get_columns():
             column_defs.append(f'{self.instance_cols[col].get_def_statement(col)}')
-        sql =  f"CREATE TABLE IF NOT EXISTS {self.get_table_name()} ({', '.join(column_defs)});"
+        sql =  f'CREATE TABLE IF NOT EXISTS {self.get_table_name()} ({', '.join(column_defs)});'
         return self.__execute(sql)
 
     def create(self):
@@ -87,7 +90,7 @@ class Model:
         if pks is None:
             pks = self.instance_cols[self.primary_key].get_value()
         if pks is None:
-            raise Exception("You need to pass value(s) or have one in the primary key of this object")
+            raise Exception('You need to pass value(s) or have one in the primary key of this object')
         return self.get_by_column(col=self.primary_key, vals=pks, fields=fields)
         
     def get_by_column(self, col=None, vals=None, fields=None):
@@ -159,26 +162,26 @@ class Model:
     
     def __get_table_name(self):
         if('table_name' not in dir(self)):
-            raise Exception("You must provide a table_name")
+            raise Exception('You must provide a table_name')
         return getattr(self, 'table_name')
 
     def __get_database_name(self):
         if('database' not in dir(self)):
-            raise Exception("You must provide a database")
+            raise Exception('You must provide a database')
         return getattr(self, 'database')
 
     def __get_secret_arn(self):
         if('secret_arn' not in dir(self)):
-            raise Exception("You must provide a secret_arn")
+            raise Exception('You must provide a secret_arn')
         return getattr(self, 'secret_arn')
 
     def __get_resource_arn(self):
         if('resource_arn' not in dir(self)):
-            raise Exception("You must provide a resource_arn")
+            raise Exception('You must provide a resource_arn')
         return getattr(self, 'resource_arn')
 
     def __filter_columns(self):
-        return [key for key in dir(self) if key[0] != "_" and isinstance(getattr(self, key), Col)]
+        return [key for key in dir(self) if key[0] != '_' and isinstance(getattr(self, key), Col)]
     
     def __execute(self, sql, with_meta=False):
         return client.execute_statement(

@@ -2,6 +2,9 @@ from goku.column import (
     Col,
     VarChar,
     IntColumn,
-    SmallInt
+    SmallInt,
+    Bool,
+    DateTime,
+    Decimal
 )
 from goku.model import Model
