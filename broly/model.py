@@ -1,5 +1,6 @@
 import json
 import boto3
+from botocore.exceptions import ClientError
 from broly.column import Col, DateTime
 from copy import deepcopy
 from pypika import MySQLQuery as Query, Table, Order
@@ -120,6 +121,10 @@ class Model:
         q = q.delete()
         q = self.__build_in_where_clause(q, col, vals)
         return self.__execute_with_wakeup(q.get_sql())
+
+    def exec_raw_sql(self, sql):
+        response = self.__execute_with_wakeup(sql, with_meta=True)
+        return json.dumps(response)
 
     def __build_order_by(self, q, col=None, order="desc"):
         if col is None:

@@ -1,7 +1,7 @@
 from datetime import datetime
 
 class Col:
-    def __init__(self, col_type, default_value=None, nullable=False, primary_key=False, unique=None, on_update=None):
+    def __init__(self, col_type, default_value=None, nullable=True, primary_key=False, unique=None, on_update=None):
         self.col_type = col_type
         self.default_value = default_value
         self.nullable = False if primary_key else nullable

@@ -21,7 +21,7 @@ MVP Features:
 - [x] Wait for serverless wakeup, boto3 doesn't retry automatically if db is 'asleep'
 - [x] Delete 
 - [x] Order results for get queries
-- [ ] Tests
+- [x] Raw SQL escape hatch
 
 
 ## To add to lambda layer
