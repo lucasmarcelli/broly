@@ -17,9 +17,10 @@ MVP Features:
 - [x] Bulk get
 - [x] Take pypika get queries to execute directly 
 - [ ] Main MySQL column classes
-- [ ] Tests
 - [ ] Basic error response handling
     - [ ] Wait for serverless wakeup, boto3 doesn't retry automatically if db is 'asleep'
+- [ ] Tests
+- [ ] Order results for get queries
 
 
 ## To add to lambda layer
@@ -33,8 +34,8 @@ Then just upload it to your lambda's layer.
 
 ## Usage
 ```python
-from model import Model
-from column import IntColumn, VarChar
+from goku.model import Model
+from goku.column import IntColumn, VarChar
 
 class Example(Model):
 

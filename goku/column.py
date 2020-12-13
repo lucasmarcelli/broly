@@ -1,10 +1,11 @@
 class Col:
-    def __init__(self, col_type, default_value, nullable, primary_key):
+    def __init__(self, col_type, default_value=None, nullable=False, primary_key=False, unique=None):
         self.col_type = col_type
         self.default_value = default_value
         self.nullable = nullable
         self.primary_key = primary_key
         self.value = default_value
+        self.unique = unique if unique is not None else self.primary_key
 
     def get_col_type(self):
         return self.col_type
@@ -14,6 +15,9 @@ class Col:
 
     def is_nullable(self):
         return self.nullable
+
+    def is_unique(self):
+        return self.is_unique
     
     def is_primary_key(self):
         return self.primary_key
@@ -31,7 +35,7 @@ class Col:
     def get_def_statement(self, name):
         val = f'{self.__get_initial_def(name)}'.strip()
         val = f'{val} {self.get_extras_for_def()}'.strip()
-        return f'{val} {self.__get_pk_and_default_def()}'.strip()
+        return f'{val} {self.__get_contraints()}'.strip()
 
     def get_extras_for_def(self):
         return ''
@@ -40,21 +44,23 @@ class Col:
         return str(self.value)
 
     def __get_initial_def(self, name):
-        return f'{name} {self.get_col_type()} {"NOT NULL" if self.is_nullable() else ""}'.strip()
-
-    def __get_pk_and_default_def(self):
-        pk = 'PRIMARY KEY' if self.is_primary_key() else ''
+        val = f'{name} {self.get_col_type()} {"NOT NULL" if self.is_nullable() else ""}'.strip()
         d = '' if self.default_value is None else f'DEFAULT {self.get_default_value()}'
-        return  f'{pk} {d}'.strip()
+        return f'{val} {d}'.strip()
+
+    def __get_contraints(self):
+        pk = 'PRIMARY KEY' if self.is_primary_key() else ''
+        unique = 'UNIQUE' if self.is_unique() else ''
+        return  f'{pk} {unique}'.strip()
 
 
 class IntColumn(Col):
 
     col_type = "INT"
     
-    def __init__(self, default_value=None, nullable=True, primary_key=False, auto_increment=False):
+    def __init__(self, default_value=None, nullable=True, primary_key=False, auto_increment=False, unique=None):
         self.auto_increment = auto_increment
-        super().__init__(IntColumn.col_type, default_value, nullable, primary_key)
+        super().__init__(IntColumn.col_type, default_value, nullable, primary_key, unique=unique)
     
     def get_aws_value_type(self):
         return "longValue"
@@ -66,9 +72,9 @@ class IntColumn(Col):
 class SmallInt(Col):
     col_type = "SMALLINT"
 
-    def __init__(self, default_value=None, nullable=True, primary_key=False, auto_increment=False):
+    def __init__(self, default_value=None, nullable=True, primary_key=False, auto_increment=False, unique=None):
         self.auto_increment = auto_increment
-        super().__init__(SmallInt.col_type, default_value, nullable, primary_key)
+        super().__init__(SmallInt.col_type, default_value, nullable, primary_key, unique=unique)
     
     def get_aws_value_type(self):
         return "longValue"
@@ -78,13 +84,26 @@ class SmallInt(Col):
         return f'{ai}'.strip()
 
 
+class Bool(Col):
+
+    col_type = "BOOLEAN"
+
+    def __init__(self, default_value=None, nullable=True):
+        super().__init__(Bool.col_type, default_value=default_value, nullable=nullable)
+
+    def get_aws_value_type(self):
+        return "booleanValue"
+
+    def set_value(self, val):
+        super().set_value(bool(val))
+
 class VarChar(Col):
 
     col_type = "VARCHAR"
 
-    def __init__(self, size=100, default_value=None, nullable=True, primary_key=False):
+    def __init__(self, size=100, default_value=None, nullable=True, primary_key=False, unique=None):
         self.size = size 
-        super().__init__(VarChar.col_type, default_value, nullable, primary_key)
+        super().__init__(VarChar.col_type, default_value, nullable, primary_key, unique=unique)
 
     def get_size(self):
         return self.size

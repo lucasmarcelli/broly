@@ -50,8 +50,7 @@ class Model:
         for col in self.get_columns():
             column_defs.append(f'{self.instance_cols[col].get_def_statement(col)}')
         sql =  f"CREATE TABLE IF NOT EXISTS {self.get_table_name()} ({', '.join(column_defs)});"
-        print(sql)
-        # return self.__execute(sql)
+        return self.__execute(sql)
 
     def create(self):
         self.__validate_columns()
@@ -59,9 +58,10 @@ class Model:
         q = Query.into(table)
         q = self.__build_insert_query(q)
         response = json.dumps(self.__execute(q.get_sql()))
-        # I'm not sure what happens if there's more than one generated field here, but that seems like a bridge to cross when I come to it.
-        key = self.instance_cols[self.primary_key].get_aws_value_type()
-        pk = response['generatedFields'][0][key]
+        pk = self.instance_cols[self.primary_key].get_value()
+        if pk is None:
+            key = self.instance_cols[self.primary_key].get_aws_value_type()
+            pk = response['generatedFields'][0][key]
         return self.get_by_pk(pk)
     
     def save(self, where=None, fields=None):
@@ -118,7 +118,10 @@ class Model:
         m = self.__class__()
         for i in range(0, len(record)):
             col = fields[i]
-            val = record[i][self.instance_cols[col].get_aws_value_type()]
+            if 'isNull' in record[i].keys():
+                val = None
+            else:
+                val = record[i][self.instance_cols[col].get_aws_value_type()]
             m.set_value(col, val)
         return m
     
