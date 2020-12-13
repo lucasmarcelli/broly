@@ -13,14 +13,15 @@ MVP Features:
 - [x] Update
 - [x] Autoincrement option
 - [x] Read by column and parse response
+    - [x] Parsing datetimes
 - [x] Table creation
 - [x] Bulk get
 - [x] Take pypika get queries to execute directly 
 - [x] Main MySQL column classes
-- [ ] Basic error response handling
-    - [ ] Wait for serverless wakeup, boto3 doesn't retry automatically if db is 'asleep'
+- [x] Wait for serverless wakeup, boto3 doesn't retry automatically if db is 'asleep'
+- [x] Delete 
+- [x] Order results for get queries
 - [ ] Tests
-- [ ] Order results for get queries
 
 
 ## To add to lambda layer

@@ -2,7 +2,7 @@ import json
 import boto3
 from broly.column import Col, DateTime
 from copy import deepcopy
-from pypika import MySQLQuery as Query, Table
+from pypika import MySQLQuery as Query, Table, Order
 
 client = boto3.client('rds-data', region_name='us-east-1')
 
@@ -34,9 +34,6 @@ class Model:
         for col in self.get_columns():
             _dict[col] = self.instance_cols[col].get_value()
         return _dict
-
-    def create_table(self):
-        pass
     
     def get_columns(self):
         return self.columns
@@ -52,15 +49,16 @@ class Model:
         column_defs = []
         for col in self.get_columns():
             column_defs.append(f'{self.instance_cols[col].get_def_statement(col)}')
-        sql =  f'CREATE TABLE IF NOT EXISTS {self.get_table_name()} ({', '.join(column_defs)});'
-        return self.__execute(sql)
+        sql =  f'CREATE TABLE IF NOT EXISTS {self.get_table_name()} ({", ".join(column_defs)});'
+        return self.__execute_with_wakeup(sql)
 
     def create(self):
         self.__validate_columns()
         table = Table(self.get_table_name())
         q = Query.into(table)
         q = self.__build_insert_query(q)
-        response = json.dumps(self.__execute(q.get_sql()))
+        response = self.__execute_with_wakeup(q.get_sql())
+        response = json.dumps(response)
         pk = self.instance_cols[self.primary_key].get_value()
         if pk is None:
             key = self.instance_cols[self.primary_key].get_aws_value_type()
@@ -77,7 +75,7 @@ class Model:
         q = Query.update(table)
         q = self.__build_update_query(q, fields)
         q = self.__build_in_where_clause(q, where, [self.instance_cols[where].get_value()])
-        response = self.__execute(q.get_sql())
+        response = self.__execute_with_wakeup(q.get_sql())
         return self.get_by_pk()
 
     def as_json(self):
@@ -86,29 +84,52 @@ class Model:
     def set_value(self, col, val):
         self.instance_cols[col].set_value(val)
 
-    def get_by_pk(self, pks=None, fields=None):
+    def get_by_pk(self, pks=None, fields=None, order_by=None, order="desc"):
         if pks is None:
             pks = self.instance_cols[self.primary_key].get_value()
         if pks is None:
             raise Exception('You need to pass value(s) or have one in the primary key of this object')
-        return self.get_by_column(col=self.primary_key, vals=pks, fields=fields)
+        return self.get_by_column(col=self.primary_key, vals=pks, fields=fields, order_by=order_by, order=order)
         
-    def get_by_column(self, col=None, vals=None, fields=None):
+    def get_by_column(self, col=None, vals=None, fields=None, order_by=None, order="desc"):
         if fields is None:
             fields = self.get_columns()
-        table = Table(self.get_table_name())
-        q = Query.from_(table)
+        q = self.__build_from_table()
         q = self.__build_get_query(q, fields)
         q = self.__build_in_where_clause(q, col, vals)
-        response = json.dumps(self.__execute(q.get_sql()))
+        if order_by is not None:
+            q = self.__build_order_by(q, order_by, order)
+        response = self.__execute_with_wakeup(q.get_sql())
+        response = json.dumps(response)
         records = self.__parse_records(response['records'], fields)
         return records
 
     def get_by_pypika_query(self, q):
-        response = json.dumps(self.__execute(q.get_sql()), with_meta=True)
+        response = self.__execute_with_wakeup(q.get_sql(), with_meta=True)
+        response = json.dumps(response)
         column_names = self.__parse_metadata(response['columnMetadata'])
         records = self.__parse_records(response['records'], column_names)
         return records
+
+    def delete(self, col=None, vals=None):
+        if col is None:
+            col = self.primary_key
+        if vals is None:
+            vals = [self.instance_cols[self.primary_key].get_value()]
+        q = self.__build_from_table()
+        q = q.delete()
+        q = self.__build_in_where_clause(q, col, vals)
+        return self.__execute_with_wakeup(q.get_sql())
+
+    def __build_order_by(self, q, col=None, order="desc"):
+        if col is None:
+            col = self.primary_key
+        o = Order[order]
+        return q.orderby(col, o)
+
+    def __build_from_table(self):
+        table = Table(self.get_table_name())
+        return Query.from_(table)
 
     def __parse_records(self, records=None, fields=None):
         parsed = []
@@ -182,6 +203,28 @@ class Model:
 
     def __filter_columns(self):
         return [key for key in dir(self) if key[0] != '_' and isinstance(getattr(self, key), Col)]
+    
+    def __execute_with_wakeup(self, sql, with_meta=False):
+        delay = 3
+        max_attempts = 10
+        attempt = 0
+
+        while attempt < max_attempts:
+            attempt += 1
+            try:
+                return self.__execute(sql, with_meta)
+            except ClientError as ce:
+                error_code = ce.response.get("Error").get('Code')
+                error_msg = ce.response.get("Error").get('Message')
+
+                # Aurora serverless is waking up
+                if error_code == 'BadRequestException' and 'Communications link failure' in error_msg:
+                    logger.info('Sleeping ' + str(delay) + ' secs, waiting RDS connection')
+                    time.sleep(delay)
+                else:
+                    raise ce
+
+        raise Exception('Waited for RDS Data but still getting error')
     
     def __execute(self, sql, with_meta=False):
         return client.execute_statement(

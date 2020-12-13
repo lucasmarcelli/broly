@@ -1,10 +1,12 @@
+from datetime import datetime
+
 class Col:
     def __init__(self, col_type, default_value=None, nullable=False, primary_key=False, unique=None, on_update=None):
         self.col_type = col_type
         self.default_value = default_value
         self.nullable = False if primary_key else nullable
         self.primary_key = primary_key
-        self.value = default_value
+        self.value = self.set_value(default_value)
         self.unique = unique if unique is not None else self.primary_key
         self.on_update = on_update
 
@@ -45,7 +47,7 @@ class Col:
         return str(self.value)
 
     def __get_initial_def(self, name):
-        val = f'{name} {self.get_col_type()} {'NOT NULL' if self.is_nullable() else ''}'.strip()
+        val = f'{name} {self.get_col_type()} {"NOT NULL" if self.is_nullable() else ""}'.strip()
         d = '' if self.default_value is None else f'DEFAULT {self.get_default_value()}'
         return f'{val} {d}'.strip()
 
@@ -113,7 +115,10 @@ class Bool(Col):
         return 'booleanValue'
 
     def set_value(self, val):
-        super().set_value(bool(val))
+        if val is None:
+            super().set_value(None)
+        else:
+            super().set_value(bool(val))
 
 class VarChar(Col):
 
@@ -136,12 +141,18 @@ class DateTime(Col):
 
     col_type = 'DATETIME'
 
-        def __init__(self, default_value=None, nullable=True, primary_key=False, unique=None, on_update=None):
-            super().__init__(VarChar.col_type, default_value, nullable, primary_key, unique=unique, on_update=on_update)
-        
-        # Always just get the max precision
-        def get_col_type(self):
-            return f'DATETIME(6)'
+    def __init__(self, default_value=None, nullable=True, primary_key=False, unique=None, on_update=None):
+        super().__init__(VarChar.col_type, default_value, nullable, primary_key, unique=unique, on_update=on_update)
+    
+    # Always just get the max precision
+    def get_col_type(self):
+        return f'DATETIME(6)'
 
-        def get_aws_value_type(self):
-            return 'stringValue'
+    def get_aws_value_type(self):
+        return 'stringValue'
+    
+    def set_value(self, val):
+        if val is None or val == 'CURRENT_TIMESTAMP':
+            super().set_value(None)
+        else:
+            super().set_value(datetime.strptime(val, "%Y-%m-%d %H:%M:%S.%f"))
