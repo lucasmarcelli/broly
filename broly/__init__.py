@@ -5,6 +5,7 @@ from broly.column import (
     SmallInt,
     Bool,
     DateTime,
-    Decimal
+    Decimal,
+    JsonColumn
 )
 from broly.model import Model

@@ -1,5 +1,4 @@
 from datetime import datetime
-
 class Col:
     def __init__(self, col_type, default_value=None, nullable=True, primary_key=False, unique=None, on_update=None):
         self.col_type = col_type
@@ -156,3 +155,18 @@ class DateTime(Col):
             super().set_value(None)
         else:
             super().set_value(datetime.strptime(val, "%Y-%m-%d %H:%M:%S.%f"))
+
+class JsonColumn(Col):
+
+    col_type = 'JSON'
+
+    def __init__(self, default_value=None, nullable=True, unique=None, on_update=None):
+        super().__init__(col_type=JsonColumn.col_type, default_value=default_value, nullable=nullable, unique=unique, on_update=on_update)
+
+    def get_col_type(self):
+        return 'JSON'
+
+    def get_aws_value_type(self):
+        return 'stringValue'
+    
+
