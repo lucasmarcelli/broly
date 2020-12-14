@@ -31,7 +31,7 @@ class Col:
         self.value = value
 
     def validate(self, key):
-        if self.get_value() is None and not self.is_nullable() and self.get_default_value() is None:
+        if self.get_value() is None and not self.is_nullable() and self.get_default_value() is None and self.auto_increment != False:
             raise Exception(f'Can\'t set non nullable value to none for {str(key)}')
     
     def get_def_statement(self, name):
